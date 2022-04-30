@@ -32,7 +32,7 @@ def convert_gray_scale(image):
     return cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
 def apply_smoothing(image):
-    
+
     #return cv2.GaussianBlur(image, (kernel_size, kernel_size), 0)
     #return cv2.bilateralFilter(image, 15, 75,75)
     #return cv2.medianBlur(image,31)
@@ -43,28 +43,28 @@ def detect_edges(image, low_threshold=50, high_threshold=150):
     return cv2.Canny(image, low_threshold, high_threshold)
 
 def filter_region(image, vertices):
-   
+
     mask = np.zeros_like(image)
     if len(mask.shape)==2:
         cv2.fillPoly(mask, vertices, 255)
     else:
-        cv2.fillPoly(mask, vertices, (255,)*mask.shape[2]) # in case, the input image has a channel dimension        
+        cv2.fillPoly(mask, vertices, (255,)*mask.shape[2]) # in case, the input image has a channel dimension
     return cv2.bitwise_and(image, mask)
 
-    
+
 def select_region(image):
-   
+
     rows, cols = image.shape[:2]
     bottom_left  = [cols*0.1, rows*0.95]
     top_left     = [cols*0.1, rows*0.01]
     bottom_right = [cols*0.9, rows*0.95]
-    top_right    = [cols*0.9, rows*0.01] 
-    
+    top_right    = [cols*0.9, rows*0.01]
+
     vertices = np.array([[bottom_left, top_left, top_right, bottom_right]], dtype=np.int32)
     return filter_region(image, vertices)
 
 def hough_lines(image):
-    
+
     return cv2.HoughLinesP(image, rho=1, theta=np.pi/180, threshold=20, minLineLength=20, maxLineGap=400)
 
 def draw_lines(image, lines, color=[255, 0, 0], thickness=2, make_copy=True):
@@ -91,18 +91,18 @@ def average_slope_intercept(lines):
                 aux1 = (y2-y1)
                 aux2 = (x2-x1)
                 slope = float(aux1)/float(aux2)
-                #print(str(aux1) + "<->" + str(aux2) + "<->" +str(slope)) 
+                #print(str(aux1) + "<->" + str(aux2) + "<->" +str(slope))
 
                 if abs(slope) < 0.15:
                     continue # ignore a horizontal line
                 intercept = y1 - slope*x1
                 length = np.sqrt((y2-y1)**2+(x2-x1)**2)
-                
+
                 if slope < 0: # y is reversed in image
                     left_lines.append((slope, intercept))
                     left_weights.append((length))
                 else:
-                    
+
                     right_lines.append((slope, intercept))
                     right_weights.append((length))
                 '''
@@ -113,40 +113,40 @@ def average_slope_intercept(lines):
                     right_lines.append((slope, intercept))
                     right_weights.append((length))
                 '''
-       
+
     left_lane  = np.dot(left_weights,  left_lines) /np.sum(left_weights)  if len(left_weights) >0 else None
     right_lane = np.dot(right_weights, right_lines)/np.sum(right_weights) if len(right_weights)>0 else None
-    
+
     return left_lane, right_lane # (slope, intercept), (slope, intercept)
 
 def make_line_points(y1, y2, line):
 
     if line is None:
         return None
-    
+
     slope, intercept = line
-    
+
     x1 = int((y1 - intercept)/slope)
     x2 = int((y2 - intercept)/slope)
     y1 = int(y1)
     y2 = int(y2)
-    
+
     return ((x1, y1), (x2, y2))
 
 def lane_lines(image, lines):
 
     left_lane, right_lane = average_slope_intercept(lines)
-    
-    y1 = image.shape[0] 
-    y2 = y1*0.1         
+
+    y1 = image.shape[0]
+    y2 = y1*0.1
 
     left_line  = make_line_points(y1, y2, left_lane)
     right_line = make_line_points(y1, y2, right_lane)
-    
+
     return left_line, right_line
 
 def draw_lane_lines(image, lines, color=[255, 255, 255], thickness=8):
-    
+
     line_image = np.zeros_like(image)
     for line in lines:
         if line is not None:
@@ -165,21 +165,21 @@ class LaneDetector:
         LineaL = [[0,0],[0,0]]
         _,smooth_gray = cv2.threshold(image,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU) #cv2.adaptativeThreshold(image,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY+cv2.THRESH_OTSU,11,2)
         edges        = detect_edges(smooth_gray)
-        
+
         regions      = select_region(edges)
 
         lines        = hough_lines(regions)
 
-       
+
         left_line, right_line = lane_lines(image, lines)
-        
+
         def mean_line(line, lines):
             if line is not None:
                 lines.append(line)
 
             if len(lines)>0:
                 line = np.mean(lines, axis=0, dtype=np.int32)
-                line = tuple(map(tuple, line)) 
+                line = tuple(map(tuple, line))
             return line
 
 
@@ -187,8 +187,8 @@ class LaneDetector:
 
         left_line  = mean_line(left_line,  self.left_lines)
         right_line = mean_line(right_line, self.right_lines)
-        
-    
+
+
         LineaR = right_line
         LineaL = left_line
 
@@ -203,20 +203,20 @@ class LaneDetector:
         global gir
         gir = (0.05274671*float(LineaL[0][0]))+(0.03002426*float(LineaL[0][1])) + (0.03945892*float(LineaL[1][0]))+(0.04439124* float(LineaR[0][0])) + (-0.64796478* float(LineaR[0][1]))+ (0.15142310*float(LineaR[1][0]))
         gir = (-(gir))+90
-    
-    
-       # else:
-        #    vel.publish(0)            
 
-    
+
+       # else:
+        #    vel.publish(0)
+
+
 
 
         #f.write(str(p1il)+","+str(LineaL)+str(LineaR)+"|"+"\n")
-          
+
 ##        if right_line is not None & left_line is not None:
   ##          dire.publish(90)
 
-    ##        vel.publish(-120)                    
+    ##        vel.publish(-120)
 
         return draw_lane_lines(image, (left_line, right_line)),left_line, right_line
 
@@ -244,7 +244,7 @@ class image_converter:
 
 
 def callback(data):
-    
+
     global medidafrente
     medidafrente = data.ranges[330]
 
@@ -268,17 +268,17 @@ def callback(data):
     print('obstaculo detras', medidadetras)
     print('pared', medidamedio)
 
-    if autonomo == 1: 
+    if autonomo == 1:
 
-        dire.publish(gir) 
+        dire.publish(gir)
         vel.publish(-200)
-   
+
 
    # time.sleep(3)
    # vel.publish(0)
-   
+
    # time.sleep(30)
-  #  dire.publish(gir)   
+  #  dire.publish(gir)
 
 
     if(medidafrente-medidadetras<0.11) and (medidafrente-medidadetras > -1000) and (medidamedio>0.49):
@@ -287,28 +287,27 @@ def callback(data):
 
         autonomo = 0
         if carro.size == 0:
-         #   vel.publish(200)
-         #   time.sleep(1.5)
+            #Avanza 13 segundos directo
             vel.publish(-150)
-            time.sleep(1)
+            time.sleep(13)
+            #Giro a la derecha en reversa 3 segundos
             dire.publish(35)
-            time.sleep(3.2)
+            vel.publish(100)
+            time.sleep(3)
+            #Giro a la derecha en reversa 4.2 segundos
+            dire.publish(-100)
+            vel.publish(100)
+            time.sleep(4.2)
+            #Giro a la izquierda 4.5 segundos
+            dire.publish(180)
+            time.sleep(4.5)
+            #Giro hacia delante 1.5 segundos
+            dire.publish(-20)
+            vel.publish(-100)
+            time.sleep(1.5)
             vel.publish(0)
-            time.sleep(1)
-            dire.publish(150)
-            vel.publish(-80)
 
-            time.sleep(4.8)
-            vel.publish(0)
 
-            time.sleep(1)
-
-            dire.publish(30)
-            vel.publish(50)
-
-            time.sleep(1.6)
-
-            vel.publish(0)
 
 
 
@@ -325,7 +324,7 @@ def callback(data):
      ##   vel.publish(-220)
     ##    dire.publish(179)
       #  time.sleep(1.5)
-       
+
      #   dire.publish(90)
      #   time.sleep(0.62)
 
@@ -358,5 +357,5 @@ def start(args):
 if __name__ == '__main__':
 
     start(sys.argv)
-    #f.close()  
-    #f.close()  
+    #f.close()
+    #f.close()
