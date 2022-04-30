@@ -22,11 +22,6 @@ QUEUE_LENGTH=50
 ##pendR=0
 #f = open ('datos.txt','w+')
 
-
-
-
-
-
 def convert_gray_scale(image):
     return cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
@@ -36,7 +31,6 @@ def apply_smoothing(image):
     #return cv2.bilateralFilter(image, 15, 75,75)
     #return cv2.medianBlur(image,31)
     return cv2.threshold(image,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-
 
 def detect_edges(image, low_threshold=50, high_threshold=150):
     return cv2.Canny(image, low_threshold, high_threshold)
@@ -49,7 +43,6 @@ def filter_region(image, vertices):
     else:
         cv2.fillPoly(mask, vertices, (255,)*mask.shape[2]) # in case, the input image has a channel dimension
     return cv2.bitwise_and(image, mask)
-
 
 def select_region(image):
 
@@ -169,7 +162,6 @@ class LaneDetector:
 
         lines        = hough_lines(regions)
 
-
         left_line, right_line = lane_lines(image, lines)
 
         def mean_line(line, lines):
@@ -181,12 +173,8 @@ class LaneDetector:
                 line = tuple(map(tuple, line))
             return line
 
-
-
-
         left_line  = mean_line(left_line,  self.left_lines)
         right_line = mean_line(right_line, self.right_lines)
-
 
         LineaR = right_line
         LineaL = left_line
@@ -199,17 +187,20 @@ class LaneDetector:
         #print(LineaL)
         ##        v2            v3          v4              v6          v7          v8
         gir = (0.05274671*float(LineaL[0][0]))+(0.03002426*float(LineaL[0][1])) + (0.03745892*float(LineaL[1][0]))+(0.04439124* float(LineaR[0][0])) + (-0.68796478* float(LineaR[0][1]))+ (0.15142310*float(LineaR[1][0]))
-        gir = (-(gir))+90
-        dire.publish(gir)
-        vel.publish(-1000)
-        #f.write(str(pil)+","+str(LineaL)+str(LineaR)+"|"+"\n")
-
-##        if right_line is not None & left_line is not None:
-  ##          dire.publish(90)
-    ##        vel.publish(-120)
+        gir = (-(gir))+95
+        print(gir)
+        
+	if(gir >= 110):
+            dire.publish(gir+25)
+            vel.publish(-900)
+        elif(gir >= 85):
+            dire.publish(gir-35)
+            vel.publish(-900)
+        else:
+            dire.publish(gir)
+            vel.publish(-1200)
 
         return draw_lane_lines(image, (left_line, right_line)),left_line, right_line
-
 
 class image_converter:
     def __init__(self):
@@ -226,12 +217,10 @@ class image_converter:
             img_bco_negro, left_line, right_line = detector.process(frame)
             cv2.imshow("salida", img_bco_negro)
 
-
         except CvBridgeError as e:
             print(e)
 
         cv2.waitKey(3)
-
 
 def callback(data):
 
