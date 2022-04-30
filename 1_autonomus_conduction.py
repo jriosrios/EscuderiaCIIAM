@@ -22,11 +22,6 @@ QUEUE_LENGTH=50
 ##pendR=0
 #f = open ('datos.txt','w+')
 
-
-
-
-
-
 def convert_gray_scale(image):
     return cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
@@ -199,14 +194,17 @@ class LaneDetector:
         #print(LineaL)
         ##        v2            v3          v4              v6          v7          v8
         gir = (0.05274671*float(LineaL[0][0]))+(0.03002426*float(LineaL[0][1])) + (0.03745892*float(LineaL[1][0]))+(0.04439124* float(LineaR[0][0])) + (-0.68796478* float(LineaR[0][1]))+ (0.15142310*float(LineaR[1][0]))
-        gir = (-(gir))+90
-        dire.publish(gir)
-        vel.publish(-1000)
-        #f.write(str(pil)+","+str(LineaL)+str(LineaR)+"|"+"\n")
-
-##        if right_line is not None & left_line is not None:
-  ##          dire.publish(90)
-    ##        vel.publish(-120)
+        gir = (-(gir))+95
+        print(gir)
+        if(gir >= 110):
+            dire.publish(gir+25)
+            vel.publish(-850)
+        elif(gir >= 85):
+            dire.publish(gir-35)
+            vel.publish(-750)
+        else:
+            dire.publish(gir)
+            vel.publish(-1000)
 
         return draw_lane_lines(image, (left_line, right_line)),left_line, right_line
 
