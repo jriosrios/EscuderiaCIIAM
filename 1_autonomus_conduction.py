@@ -202,6 +202,9 @@ class LaneDetector:
         elif(gir >= 85):
             dire.publish(gir-35)
             vel.publish(-750)
+	elif(gir<=70):
+            dire.publish(gir-55)
+            vel.publish(-750)
         else:
             dire.publish(gir)
             vel.publish(-1000)
