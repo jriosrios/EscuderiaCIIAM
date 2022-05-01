@@ -20,6 +20,9 @@ import time
 pub = None
 QUEUE_LENGTH=50
 
+estado = 0
+inicio = True
+
 ##pendR=0
 #f = open ('datos.txt','w+')
 
@@ -201,25 +204,30 @@ class LaneDetector:
         #if  medida == "inf":
         ##        v2            v3          v4              v6          v7          v8
         global gir
+        # global medida
+        # global medidac
+        # global medidad
         gir = (0.05274671*float(LineaL[0][0]))+(0.03002426*float(LineaL[0][1])) + (0.03745892*float(LineaL[1][0]))+(0.04439124* float(LineaR[0][0])) + (-0.68796478* float(LineaR[0][1]))+ (0.15142310*float(LineaR[1][0]))
-        gir = (-(gir))+95
-        #print(gir)
-        if(gir >= 110):
-            gir=gir+25
-            dire.publish(gir)
-            vel.publish(-450)
-        elif(gir >= 85):
-            gir=gir-35
-            dire.publish(gir)
-            vel.publish(-350)
-        elif(gir<=70):
-            gir=gir-55
-            dire.publish(gir)
-            vel.publish(-350)
+        gir = (-(gir))+90
+        # print("Giro: ",gir)
 
-        else:
-            dire.publish(gir)
-            vel.publish(-600)
+        #print(gir)
+        # # # if medida >= 1.18 and medidac > 2 and medidad > 2:
+        # if(gir >= 110):
+        #     gir=gir+25
+        # #     # dire.publish(gir)
+        # #     # vel.publish(-450)
+        # elif(gir >= 85):
+        #     gir=gir-35
+        # #     # dire.publish(gir)
+        # #     # vel.publish(-350)
+        # if(gir<=70):
+        #     gir=gir-55
+            # dire.publish(gir)
+
+        # else:
+        #     dire.publish(gir)
+        #     vel.publish(-600)
 
         return draw_lane_lines(image, (left_line, right_line)),left_line, right_line
 
@@ -239,7 +247,6 @@ class image_converter:
             img_bco_negro, left_line, right_line = detector.process(frame)
             cv2.imshow("salida", img_bco_negro)
 
-
         except CvBridgeError as e:
             print(e)
 
@@ -249,44 +256,140 @@ class image_converter:
 def callback(data):
 
     global medida
-
+    global estado
+    global inicio
+    # global medidac
+    # global medidad
+    # grados = data.ranges[:]
+    # for i in range(0,len(grados),1):
+    #     print("Grado {}: {}".format(i,grados[i]))
+    # time.sleep(20)
     medida = data.ranges[0]
-
     medidac = data.ranges[20]
     medidad = data.ranges[330]
+
+    if inicio:
+        vel.publish(0)
+        time.sleep(2)
+        inicio = False
+
+    print("estado: ", estado)
 
     print('lidar r', medida)
     print('lidar c', medidac)
     print('lidar d', medidad)
 
-    dire.publish(gir)
 
-    if medida < 1.18:
 
-        dire.publish(173)
-        time.sleep(1)
+# Estado = 0 El giro se calcula solo (detras del carro)
+    if estado == 0:
+        dire.publish(gir)
+        vel.publish(-800)
 
-        dire.publish(90)
-        time.sleep(0.62)
+        if medida < 1.5 or medidac < 1.5 or medidad < 1.5:
+            # vel.publish(-600)
+            estado = 1
+            # variablita = True
 
-        dire.publish(10)
-        time.sleep(0.59)
+        # if medida < 1.1 or medidac < 1.1 or medidad < 1.5:
+        #     vel.publish(-400)
+        #     estado = 1
+            # variablita = True
 
-    if medidac < 1.3:
-        dire.publish(190)
-        time.sleep(2.2)
-        vel.publish(-100)
+# Estado = 1 CAMBIO DE CARRIL
+    if estado == 1:
+        dire.publish(110)
+        vel.publish(-600)
 
-        dire.publish(190)
-        time.sleep(2.2)
+        if medida < 0.6 or medidac < 0.6 or medidad < 0.6:
+        # valores = data.ranges[300:315]
+        # valores = [x for x in valores if x < 0.8]
+        # if len(valores) > 0:
+            vel.publish(0)
+            time.sleep(0.5)
+            dire.publish(130)
+            vel.publish(-300)
+            time.sleep(0.5)
 
-        dire.publish(10)
-        time.sleep(1.5)
+        if data.ranges[270] < 0.7 or data.ranges[290] < 0.7:
+            # print("bRRRR")
+            vel.publish(0)
+            time.sleep(0.5)
+            estado = 2
 
-    if medidad < 2:
-        dire.publish(90)
-        vel.publish(-400)
-        time.sleep(2.2)
+# Estado = 2 REBASE
+
+    if estado == 2:
+
+        print("ESTADO 2")
+        vel.publish(-800)
+        dire.publish(0)
+        time.sleep(0.5)
+        # dire.publish(10)
+        # vel.publish(-400)
+        # time.sleep(0.5)
+        dire.publish(gir)
+
+
+        # valores = data.ranges[255:270]
+        # valores = [x for x in valores if x < 0.5]
+        # if len(valores) >= 10:
+        #     time.sleep(1)
+        #     estado = 3
+
+        valoresD = data.ranges[240:250]
+        # valoresT = data.ranges[240:250]
+        valoresD = [x for x in valoresD if x > 1.5]
+        # valoresT = [y for y in valoresT if x < 0.7]
+        # if len(valoresD) >= 5 and len(valoresT) >= 5:
+        if len(valoresD) >= 5:
+
+            time.sleep(5)
+            estado = 3
+
+
+# Estado = 3 REGRESO A CARRIL DERECHO
+
+    if estado == 3:
+        print("ESTADO 3")
+        dire.publish(0)
+        vel.publish(-500)
+        # valores = data.ranges[210:230]
+        # valores = [x for x in valores if x < 0.7]
+        # if len(valores) >= 5:
+        #     time.sleep(1)
+        time.sleep(10)
+        estado = 0
+
+
+            # dire.publish(173)
+            # vel.publish(-100)
+            # time.sleep(1) #1
+            #
+            # dire.publish(90)
+            # time.sleep(0.62)#0.62
+            #
+            # dire.publish(10)
+            # time.sleep(0.59)#0.59
+
+        # if medidac < 1.3:
+        #     dire.publish(190)
+        #     time.sleep(2.2) #2.2
+        #     vel.publish(-100)
+        #     time.sleep(1) #1
+        #     dire.publish(190)
+        #     time.sleep(2.2) #2.2
+        #     dire.publish(10)
+        #     time.sleep(3) #3
+        #
+        # if medidad < 2:
+        #     dire.publish(90)
+        #     vel.publish(-400)
+        #     time.sleep(2.2) #2.2
+        #     variablita = True
+        #     print("Ya sali de aqui: ", variablita)
+
+    # return variablita
 
 
 def Ansrec(data):
@@ -297,6 +400,10 @@ def start(args):
     global vel
     global dire
     global sub
+    # global variablita
+    # variablita = True
+    print("Pasando por aqui")
+
     #sub = rospy.Subscriber('Angulo',Int16, Ansrec)
     vel = rospy.Publisher('AutoModelMini/manual_control/speed', Int16,queue_size = 10)
     dire = rospy.Publisher('AutoModelMini/manual_control/steering', Int16,queue_size = 10)
@@ -312,4 +419,3 @@ def start(args):
 if __name__ == '__main__':
     start(sys.argv)
     #f.close()
-
