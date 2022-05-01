@@ -289,6 +289,9 @@ def callback(data):
         if medida < 1.5 or medidac < 1.5 or medidad < 1.5:
             # vel.publish(-600)
             estado = 1
+
+        if data.ranges[30] < 1.8 or data.ranges[20]< 1.8:
+            estado = 4
             # variablita = True
 
         # if medida < 1.1 or medidac < 1.1 or medidad < 1.5:
@@ -361,7 +364,25 @@ def callback(data):
         time.sleep(10)
         estado = 0
 
+# Estado = 4 CAMBIO DE CARRIL EN CURVA
+    if estado == 4:
 
+        dire.publish(180)
+        vel.publish(-300)
+        if data.ranges[325] < 1.4 or data.ranges[327] < 1.4:
+            estado=5
+# Estado = 5 REBASE EN Curva
+    if estado == 5:
+        dire.publish(gir)
+        if data.ranges[270] < 1.0:
+            time.sleep(1)
+            estado = 6
+
+# Estado = 6 REBASE EN Curva
+    if estado == 6:
+        dire.publish(10)
+        time.sleep(1)
+        estado = 0
             # dire.publish(173)
             # vel.publish(-100)
             # time.sleep(1) #1
